@@ -1,4 +1,4 @@
-function varargout = plotsp(sp, varargin)
+function varargout = plot(sp, varargin)
 % PLOT Plot the sparse grids for 2D and 3D.
 
 if (~isa(sp,'spgrid'))

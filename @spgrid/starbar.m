@@ -1,7 +1,7 @@
-function indset = starbar( d, l, type )
+function indset = starbar(d, l, type)
 %STARBAR Returns the multi-index set of level L
-%   INDSET = STARBAR( D, L, TYPE)
-%   This program use star and bars method for multi-index set of level = L. 
+%   INDSET = STARBAR(D, L, TYPE)
+%   This program use star and bars method for levelset of level = L. 
 
 % Checked: 12-Sep-2017
 % $Last revised: 12-Sep-2017$
@@ -17,23 +17,20 @@ if ( ~ismember(type,valid_type) )
         'TYPE must be one of {''disinner'',''disall'',''quad'',''smolyak''}')
 end
 
-k = d-1; n = d+l-1; v = 1:n;
+
+k = d - 1; n = d + l - 1; v = 1:n;
 if k == 0
     indset = l;
 else
-    indset = nchoosek(v,k);
-    m = size(indset,1);
+    indset = nchoosek(v, k);
+    m = size(indset, 1);
     indset = [indset,(n+1)*ones(m,1)];
-    indset(:,2:end) = indset(:,2:end)-indset(:,1:end-1);
+    indset(:,2:end) = indset(:,2:end) - indset(:,1:end-1);
 end
 
-% special for each type 
-if ismember(type,{'disinner','disall'})
-    if strcmpi(type,'disall')
-        indset = spgrid.inner2all(indset);
-    end
-elseif ismember(type,{'quad','smolyak'})
-    indset = bsxfun(@minus,indset,1);
+% special for each type
+if strcmpi(type,'disall')
+    indset = spgrid.inner2all(indset);
 end
 
 indset = sortrows(indset);

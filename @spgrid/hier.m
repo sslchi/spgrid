@@ -1,35 +1,54 @@
-function [ss,ll] = hier(l,type)
+function [hid,level] = hier(l,type)
 % HIER  Return index of grids in Hierarchical order.
-%  [SS,LL] = HIER(L,TYPE), where L is the level, SS is the index of grids in
-%  Hierarchical order. LL(i) is the level of grids SS(i) on. Note the NO. of
-%  total grids are 2^L+1. TYPE is the type of sparse grids, it should be one of
+%  [HID,LEVEL] = HIER(L,TYPE), where L is the level, HID is the index of grids in
+%  Hierarchical order. LEVEL(i) is the level of grids HID(i) on. TYPE is the
+%  type of sparse grids, it should be one of
 %  {'disall','disinner','quad','symolyak'}.
-% 
-% Example
-%  l = 3, type = 'disinner'
-% level
-%   0       o                       o
-%   1                   o
-%   2             o           o
-%   3          o     o     o     o
-%           o  o  o  o  o  o  o  o  o
-%           1  2  3  4  5  6  7  8  9
-%
-%
-% [ss,ll] = spgrid.hier(3,'disinner')
+%  X(hid) will arrange Nodes in Hierarchical order, where X is the nodes in
+%  ascending order.
 
 
-% Checked: 07-Sep-2017.
-% $Last revised: 07-Sep-2017$
+
+% Checked: 24-Sep-2017.
+% $Last revised: 24-Sep-2017$
 % Copyright (c) Guanjie Wang, wangguanjie0@126.com
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% For disinner & disall:
+%                      D <= |levelset|_1 <= L + D
+%                --->  |levelset  - 1|_1 < = L    }
+%                      |levelset|_min = 1         }
+%                --->  |levelset|_inf = L + 1
 %
-% This algorithm is faster than the one given by Jie Shen and Haijun Yu 
-% list below this program. 
+% the disadjoint points in each level is like this:
 %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                           _____levelset_____
+%   L                                       disinner    disall
+%           o                       o                      0
+%   0                   o                       1          1
+%   1             o           o                 2          2
+%   2          o     o     o     o              3          3
+%           o  o  o  o  o  o  o  o  o
+%           1  6  4  7  3  8  5  9  2       Nodes in Hierarchical order
+%           1  2  3  4  5  6  7  8  9       Nodes in oordinary order
+%
+%
+%% For quad & Smolyak :
+%                      D <= |levelset|_1 <= L + D
+%                --->  |levelset - 1|_1 < = L   }
+%                      |levelset - 1|_min = 0   }
+%                --->  |levelset - 1|_inf = L
+%
+% the disadjoint points in each level is like this:
+%
+%   L                                       levelset
+%
+%   1       o                       o          2
+%   0                   o                      1
+%   2             o           o                3
+%   3          o     o     o     o             4
+%           o  o  o  o  o  o  o  o  o
+%           2  6  4  7  1  8  5  9  3       Nodes in Hierarchical order
+%           1  2  3  4  5  6  7  8  9       Nodes in oordinary order
 
 % Parse input
 if l < 0
@@ -43,53 +62,37 @@ if ( ~ismember(type, valid_type) )
         'TYPE must be one of {''disinner'',''disall'',''quad'',''smolyak''}')
 end
     
-    
-% initialisation
-N = 2^l; tt = 2:N; tt = tt(:); 
-ss = zeros(N+1,1); ll = ss;
 
-% level zero
-ss([1,2]) = [1,N+1];
 
-for k = (l-1):-1:0 
+if ismember(type, {'disall','disinner'})
+    [hid, level] = sub_hier(l+1);
+elseif ismember(type, {'quad','symolyak'})
+    [hid, level] = sub_hier(l);
+    level = bsxfun(@plus, level, 1);
+    if (l == 0)
+        hid = 1; level = 1;
+    else
+        hid([1,2,3]) = hid([3,1,2]);
+        level([1,2,3]) = [1,2,2];
+    end
+end
+
+end
+
+
+function [hid, level] = sub_hier(l)
+%SUB_HIER  return hid  Hierarchical order and their level.
+
+N = 2^l;
+tt = 2:N; tt = tt(:);
+hid = zeros(N+1,1);
+level = zeros(N+1,1);
+hid([1,2]) = [1,N+1];
+for k = (l-1):-1:0 % loop from the last level
     Nb = 2^(k) + 2; Ne = 2^(k+1) +1;
-    ss(Nb:Ne) = tt(1:2:end); tt(1:2:end) = [];   
-    ll(Nb:Ne) = (k+1)*ones(Ne-Nb+1,1);  
+    hid(Nb:Ne) = tt(1:2:end); tt(1:2:end) = [];
+    level(Nb:Ne) = (k+1)*ones(Ne-Nb+1,1);
 end
-
-
-switch type
-    case {'disall','disinner'}
-        return
-    case {'quad','symolyak'}
-        if l == 0
-            ss = 1; ll = 0;
-        else
-            ss([1,2,3]) = ss([3,1,2]); ll([1,2,3]) = [0,1,1];
-        end
-end
-
-
-
-
 
 end
 
-%% ----------------------------- algorithm of Shen Jie -------------------------
-%%%  Ref: Efficient	Spectral Sparse	Grid Methods and Applications to
-%%%  High-Dimensional Elliptic Problems. Shen Jie & HaiJun Yu. SIAM J. Sci.
-%%%  Comput.
-
-% function s = hier(l)
-% 
-% N = 2^l;
-% 
-% s = zeros(N+1,1); s(1) = 1;
-% 
-% for k = 1:N
-%     m = ceil(log2(k));
-%     s(k+1) = 2^l/2^m*(1+2*(2^m-k))+1;
-% end
-%     
-% 
-% end

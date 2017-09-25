@@ -1,115 +1,108 @@
-classdef spgrid < handle
-    %SPGRID A class of sparse grids.
-    %  SP = SPGRID( D,L,TYPE ) construct an object of SPGRID.
-    %  TYPE must be one of {'disinner','disall','quad','smolyak'}, and 'quad' is
-    %  the same as 'smolyak'. The default TYPE is 'disall'. D is the dimension
-    %  of variable, L is the level of sparse grids, whicth is interprated as
-    %  following:
-    %
-    %  disall & disinner:  D <= |level|_1 <= L + D.
-    %                --->  indset := level
-    %                --->  |indset  - 1|_1 < = L
-    %                --->  |indset|_inf = L + 1    |indset|_min = 1
-    %
-    %  quad & Smolyak :    D <= |level|_1 <= L + D
-    %                --->  |level-1|_1 < = L
-    %                --->  indset := level-1
-    %                --->  |indset|_inf = L   |indset|_min = 0;
+classdef spgrid
+    %SPGRID  A class of sparse grids.
+    %  SP = SPGRID(D, L, TYPE) construct an object of SPGRID.
+    %  D is the dimension, L is the level and Type is the type of the sparse
+    %  grids.
     %
     %
-    %  for Smolyak, the disadjoint points in each level is like this
-    %  ------------------------------------------------------------------
-    %  level                                    l := level - 1.
-    %   2       o                       o       1   include
-    %   1                   o                   0
-    %   3             o           o             2
-    %   4          o     o     o     o          3
-    %           o  o  o  o  o  o  o  o  o
-    %           1  2  3  4  5  6  7  8  9
-    %  -----------------------------------------------------------------
     %
-    %  for disinner, the disadjoint points in each level is like this
-    %  -----------------------------------------------------------------
-    %  level                                      l := level
-    %   0       o                       o         0   exclude
-    %   1                   o                     1
-    %   2             o           o               2
-    %   3          o     o     o     o            3
-    %           o  o  o  o  o  o  o  o  o
-    %           1  2  3  4  5  6  7  8  9
-    %------------------------------------------------------------------
     %
-    %  NOTE: This is differnt from spgrid.indx. 
-    %  
-    %  All the defalut values of inputs are setted in parsespin.
-    %
-    % Example:
-    %
-    %  sp = spgrid(2, 5, 'disall');
-    %  plot(sp, 'r.')
-    %
-    % See also spgrid.indx, spgrid.parsespin.
     
-    % Checked: 14-Sep-2017.
-    % $Last revised: 14-Sep-2017$
-    % Copyright (c) Guanjie Wang, wangguanjie0@126.com
+    %% For disinner & disall:   
+    %                      D <= |levelset|_1 <= L + D
+    %                --->  |levelset  - 1|_1 < = L    }
+    %                      |levelset|_min = 1         }
+    %                --->  |levelset|_inf = L + 1    
+    %
+    % the disadjoint points in each level is like this:
+    %                                                  
+    %                                           _____levelset_____              
+    %   L                                       disinner    disall 
+    %           o                       o                      0              
+    %   0                   o                       1          1  
+    %   1             o           o                 2          2  
+    %   2          o     o     o     o              3          3  
+    %           o  o  o  o  o  o  o  o  o
+    %           1  6  4  7  3  8  5  9  2       Nodes in Hierarchical order
+    %           1  2  3  4  5  6  7  8  9       Nodes in oordinary order
+    %
+    %% For quad & Smolyak : 
+    %                      D <= |levelset|_1 <= L + D
+    %                --->  |levelset - 1|_1 < = L   }
+    %                      |levelset - 1|_min = 0   }
+    %                --->  |levelset - 1|_inf = L   
+    %
+    % the disadjoint points in each level is like this:
+    %
+    %   L                                       levelset                 
+    %
+    %   1       o                       o          2               
+    %   0                   o                      1               
+    %   2             o           o                3               
+    %   3          o     o     o     o             4              
+    %           o  o  o  o  o  o  o  o  o
+    %           2  6  4  7  1  8  5  9  3       Nodes in Hierarchical order
+    %           1  2  3  4  5  6  7  8  9       Nodes in oordinary order
+
+    
     
     properties
-        d;              % dimension  [done]
-        l;              % level [done]
-        type;           % type of grids, {'disall','disinner','quad','smolyak'} [done]
-        x;              % Nodes [done]
-        I;              % index of Nodes for full tensor [done]
+        d;              % dimension
+        l;              % level (The maximum is l)
+        type;           % type of grids
+        x;              % Nodes in Hierarchical order
+        I;              % index of Nodes
         w;              % quadrature weights
         v;              % barycentric weights for interpolation
     end
     
     methods
-        
-        function sp = spgrid(d,l,varargin)
-            % SPGRID Counstruct an obejct of  SPGRID class.
+        function sp = spgrid(d, l, type, varargin)
             
-            % parse whether all varargin is char.
-            [varargin, isallchar] = spgrid.parsespin(varargin,'allchar');
-            if ( ~isallchar )
-                warning('SPGRID:InPut',...
-                    ['Inputs after the second input',...
-                    'should be a CHAR or NUMERIC, otherwise, it will be ignored.']);
-            end
-            
-            % Parse the type of grids
-            type  = spgrid.parsespin( varargin, 'type');
+            % Parse input
             valid_type = {'disall', 'disinner', 'quad', 'smolyak'};
             if ( ~ismember(type, valid_type) )
                 error('spgrid:InPut',...
                     'TYPE must be one of {''disinner'',''disall'',''quad'',''smolyak''}')
             end
             
-            %% compute sp.I and sp.x
-            % for special case
-            if ( ismember(type, {'quad','smolyak','disinner'}) && (l == 0) )
-                sp.I = ones(1,d);
-            elseif ismember(type, {'disinner','disall'})
-                l = l + 1;
+            if  ( ismember(type, {'disinner','disall'}) )
+                [x, w, v] = chebpts(2^(l+1) + 1); x = linspace(-1,1,2^(l+1)+1);
+            elseif ( ismember(type, {'quad', 'smolyak'}) )
+               if ( l == 0 ) 
+                   [x, w, v] = chebpts(1);  x = 0;
+               else
+                   [x, w, v] = chebpts(2^l + 1); x = linspace(-1,1,2^l+1);
+               end
+                
             end
-            sp.I = spgrid.constructor( d, l, type );
-            x = chebpts(2^l+1); sp.x = x(sp.I);
-            sp.d = d; sp.l = l; sp.type = type;
+            hid = spgrid.hier(l, type);
+            x = x(hid); w = w(hid); v = v(hid);
+            
+            I = spgrid.constructor(d, l, type);
+            x = x(I);
+            
+            sp.d = d; 
+            sp.l = l;
+            sp.type = type;
+            sp.x  = x;
+            sp.I = I;
+            sp.w = w;
+            sp.v = v;
         end
-        
         
         
     end
     
     methods ( Access = public, Static = false )
-        varargout = plotsp(sp,varargin);
+        varargout = plot(sp,varargin);
     end
     methods ( Access = public, Static = true )
         
         [type,number] = parsespin(spvar, par)   % Parse input
         indset = starbar(d, l, type )           % indset of level l for d dimension
         indset = inner2all(indset)              % turn inner indset to all indset
-        indset = indx(d, l, varargin);          % total indset
+        indset = levelset(d, l, varargin);      % level set
         numsp = numsp(indset, type, level)      % number of sparse grids
         [ss,ll] = hier(l, type)                 % index of grids in Hierarchical order.
         [x,y] =  constructor(d, l, type)        % main constructor of spgrid
@@ -117,6 +110,8 @@ classdef spgrid < handle
         [ff,dff] = heirlinear(l, x, type)       % piece wise linear Hierarchical basis
         
     end
+    
+    
     
 end
 

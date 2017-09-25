@@ -1,58 +1,50 @@
-function II = constructor( d, l, type )
+function II = constructor(d, l, type)
 % CONSTRUCTOR  The main constructor of SPGRID.
-%   II = CONSTRUCTOR( D, L,TYPE)
-%   The multi_index, i.e., level, satisfy D <= |level|_1 <= L + D 
+%   II = CONSTRUCTOR(D, L, TYPE) returns the index of sparse grids in
+%   Hierarchical order.
 
-% Checked: 12-Sep-2017
-% $Last revised: 12-Sep-2017$
+% Checked: 23-Sep-2017
+% $Last revised: 23-Sep-2017$
 % Copyright (c) Guanjie Wang, wangguanjie0@126.com
 
+levelset = spgrid.levelset(d, l, type); % set of levels
+numsp = spgrid.numsp(levelset,type);    % cumulative number of points for indset.
+II = zeros(numsp(end),d);               % initialisation
 
-[ss,ll] = spgrid.hier(l,type);
-indset = spgrid.indx(d,l,type);% for set of multi_index
-numsp = spgrid.numsp(indset,type); % cumulative number of points for indset.
-II = zeros(numsp(end),d);
-
-for ii = 1:size(indset,1)
-    indx = indset(ii,:);
-    indicator = bsxfun(@eq, ll, indx);
-    
+for ii = 1:size(levelset,1)
+    indx = levelset(ii,:);
     yy = cell(d,1);
     for kk = 1:d
-        yy{kk} = ss(indicator(:,kk));
+        ll = indx(kk); 
+        switch type
+            case {'quad','symolyak'}
+                if (ll == 1)
+                    yy{kk} = 1;
+                elseif (ll == 2)
+                    yy{kk} = [2;3];
+                else
+                    yytemp = 2^(ll-2):(2^(ll-1) - 1);
+                    yy{kk} = bsxfun(@plus, yytemp(:), 2);
+                end
+            case {'disall','disinner'}
+                if (ll == 0)
+                    yy{kk} = [1;2];
+                elseif (ll == 1)
+                    yy{kk} = 3;
+                else 
+                    yytemp = 2^(ll-1):(2^ll - 1);
+                    yy{kk} = bsxfun(@plus, yytemp(:), 2);
+                end
+                
+        end
+                
     end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
     nodes = yy{1} ;
     for kk = 2:d
         newnodes = yy{kk};
         nodes = [kron(nodes,ones(size(newnodes,1),1)),...
             kron(ones(size(nodes,1),1),newnodes)];
-    end 
-%%%-------- equals to the following, but the above is more efficient. ----------
-%     
-%    
-%         decim = sum(indicator,1);
-%     
-%         Nii = prod(decim);
-%         nodes = zeros(Nii,d);
-%     
-%        for kk = 1:Nii
-%            for tt = d:-1:1
-%     
-%               ptt = decim(tt);
-%     
-%               if (tt == d)
-%                   cptt = 1;
-%               else
-%                   cptt = prod(decim((tt+1:end)));
-%               end
-%     
-%               idii = mod(floor((kk-1)/cptt),ptt) + 1;
-%               yytemp = yy{tt};
-%               nodes(kk,tt) = yytemp(idii);
-%            end
-%        end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    end    
     temp_a = numsp(ii) + 1; temp_b = numsp(ii+1);
     II(temp_a:temp_b,:) = nodes;
 end
