@@ -3,6 +3,7 @@ classdef spfun < handle
 %   Detailed explanation goes here
     
     properties
+        dim              % dimension
         domain           % the domain of support
         coef             % coeffcients of basis
         

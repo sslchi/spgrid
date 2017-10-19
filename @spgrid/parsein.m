@@ -1,6 +1,6 @@
-function [type, number] = parsespin(spvar, par)
-% PARSESPIN Parse input of SPGRID functions.
-%   TYPE = PARSESPIN( SPVAR, PAR) will return the result of varargin.
+function [type, number] = parsein(spvar, par)
+% PARSEIN Parse input of SPGRID functions.
+%   TYPE = PARSEIN( SPVAR, PAR) will return the result of varargin.
 %   SPVAR should be a cell structure and all the arry of SPVAR should be char or
 %   string, PAR is a char or string.
 %
@@ -12,7 +12,7 @@ function [type, number] = parsespin(spvar, par)
 if ischar(par)
     par = lower(par);
 else
-    error('SPGRID:parsespin:InPut',...
+    error('SPGRID:parsein:InPut',...
         'Second input should be CHAR.')
 end
 
@@ -83,7 +83,7 @@ switch par
         end
         
     otherwise
-        error('spgrid:parsespin','second input must be a CHAR type/allchar...\n')
+        error('spgrid:parsein','second input must be a CHAR type/allchar...\n')
 end
 
 end

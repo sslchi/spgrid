@@ -4,24 +4,24 @@ function varargout = plot(sp, varargin)
 if (~isa(sp,'spgrid'))
     error('spgrid:plot:InPut',...
         'SP must be a SPGRID object for 2D or 3D.\n')
-elseif ( (sp.d > 3) || (sp.d < 2) )
+elseif ( (sp.dim > 3) || (sp.dim < 2) )
      error('spgrid:plot:InPut',...
         'SP must be a SPGRID object for 2D  or 3D.\n')
 end
 
 if ( nargin == 1 )
     
-    if (sp.d == 2)
+    if (sp.dim == 2)
         h = plot(sp.x(:,1),sp.x(:,2),'.');
-    elseif (sp.d == 3)
+    elseif (sp.dim == 3)
         h = plot3(sp.x(:,1),sp.x(:,2),sp.x(:,3),'.');
     end
     
 else
     
-    if (sp.d == 2)
+    if (sp.dim == 2)
         h = plot(sp.x(:,1),sp.x(:,2),varargin{:});
-    elseif (sp.d == 3)
+    elseif (sp.dim == 3)
         h = plot3(sp.x(:,1),sp.x(:,2),sp.x(:,3),varargin{:});
     end
     

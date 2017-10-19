@@ -1,1 +1,0 @@
-function coef2value()

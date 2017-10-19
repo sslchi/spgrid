@@ -47,8 +47,8 @@ classdef spgrid
     
     
     properties
-        d;              % dimension
-        l;              % level (The maximum is l)
+        dim;            % dimension
+        level;          % level 
         type;           % type of grids
         x;              % Nodes in Hierarchical order
         I;              % index of Nodes
@@ -57,7 +57,7 @@ classdef spgrid
     end
     
     methods
-        function sp = spgrid(d, l, type, varargin)
+        function sp = spgrid(dim, level, type, varargin)
             
             % Parse input
             valid_type = {'disall', 'disinner', 'quad', 'smolyak'};
@@ -67,23 +67,23 @@ classdef spgrid
             end
             
             if  ( ismember(type, {'disinner','disall'}) )
-                [x, w, v] = chebpts(2^(l+1) + 1); x = linspace(-1,1,2^(l+1)+1);
+                [x, w, v] = chebpts(2^(level+1) + 1); 
             elseif ( ismember(type, {'quad', 'smolyak'}) )
-               if ( l == 0 ) 
-                   [x, w, v] = chebpts(1);  x = 0;
+               if ( level == 0 ) 
+                   [x, w, v] = chebpts(1); 
                else
-                   [x, w, v] = chebpts(2^l + 1); x = linspace(-1,1,2^l+1);
+                   [x, w, v] = chebpts(2^level + 1); 
                end
                 
             end
-            hid = spgrid.hier(l, type);
+            hid = spgrid.hier(level, type);
             x = x(hid); w = w(hid); v = v(hid);
             
-            I = spgrid.constructor(d, l, type);
+            I = spgrid.constructor(dim, level, type);
             x = x(I);
             
-            sp.d = d; 
-            sp.l = l;
+            sp.dim = dim; 
+            sp.level = level;
             sp.type = type;
             sp.x  = x;
             sp.I = I;
@@ -99,7 +99,7 @@ classdef spgrid
     end
     methods ( Access = public, Static = true )
         
-        [type,number] = parsespin(spvar, par)   % Parse input
+        [type,number] = parsein(spvar, par)    % Parse input
         indset = starbar(d, l, type )           % indset of level l for d dimension
         indset = inner2all(indset)              % turn inner indset to all indset
         indset = levelset(d, l, varargin);      % level set
